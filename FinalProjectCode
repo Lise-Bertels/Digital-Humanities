@@ -1,0 +1,179 @@
+#install the packages
+install.packages("tm") # for text mining 
+install.packages("SnowballC") # for text stemming 
+install.packages("wordcloud") # for the word-cloud
+ install.packages("RColorBrewer") # for the colors
+install.packages("syuzhet") # for sentiment analysis
+install.packages("ggplot2") # for plotting graphs
+#Sentiment analysis, install packages
+install.packages("sentimentr")
+install.packages("data.table")
+install.packages("plyr") 
+install.packages("tidyverse")
+install.packages("tidytext")
+install.packages("glue")
+install.packages("stringr")
+
+#load the packages
+library(tm)
+library(wordcloud)
+library(SnowballC)
+library(RColorBrewer)
+library(syuzhet)
+library(ggplot2)
+
+#givingnamestotexts
+anglais<-readLines('everyone.txt')
+#create a corpus
+docs<-Corpus(VectorSource(anglais))
+#pour voir le corpus utiliser inspect(docs)
+#Pour nettoyer le texte de trucs indésirables
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "/")
+docs <- tm_map(docs, toSpace, "@")
+docs <- tm_map(docs, toSpace, "\\|")
+docs <- tm_map(docs, toSpace, "’")
+docs <- tm_map(docs, toSpace, "”")
+docs <- tm_map(docs, toSpace, "“")
+docs <- tm_map(docs, toSpace, "—")
+docs <- tm_map(docs, toSpace, ",")
+
+# Convertir le texte en minuscule
+docs <- tm_map(docs, content_transformer(tolower))
+# Supprimer les nombres
+docs <- tm_map(docs, removeNumbers)
+# Supprimer les mots vides anglais
+docs <- tm_map(docs, removeWords, stopwords("english"))
+# Supprimer les ponctuations
+docs <- tm_map(docs, removePunctuation)
+# Supprimer les espaces vides supplémentaires
+docs <- tm_map(docs, stripWhitespace)
+
+# Build a term-documents matrix
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+#Build a Word Cloud
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# Frequent Words, repeated more than 20 times
+findFreqTerms(dtm, lowfreq = 20)
+# Word associated with certain other words, namely ‘Gilda’, ‘anxiety’, ‘church’, ‘Death’
+findAssocs(dtm, terms = "gilda", corlimit = 0.3)
+findAssocs(dtm, terms = "anxiety", corlimit = 0.3)
+findAssocs(dtm, terms = "church", corlimit = 0.3)
+findAssocs(dtm, terms = "death", corlimit = 0.3)
+
+#10 most frequent words 
+head(d, 10)
+# Graph for the frequence of words
+barplot(d[1:10,]$freq, las = 2, names.arg = d[1:10,]$word,
+        col ="red", main ="Most frequent words In My Text ",
+        ylab = "Word frequencies")
+
+#Load Sentiment Analysis Packages
+library(sentimentr)
+library(data.table)
+library(plyr)
+library(tidyverse)
+library(tidytext)
+library(glue)
+library(stringr)
+
+#Sentiment Analysis fonction (only works for texts in English)
+sentimentanalysis<-get_sentences(anglais)
+sentiment(sentimentanalysis)
+
+
+analysisofsentiment<-syuzhet:: get_sentiment(anglais)
+head(analysisofsentiment)
+sum(analysisofsentiment)
+summary(analysisofsentiment)
+
+
+s_v <- get_sentences(anglais)
+s_v_sentiment <- get_sentiment(s_v)
+plot(
+  s_v_sentiment, 
+  type="l", 
+  main="Example Plot Trajectory", 
+  xlab = "Narrative Time", 
+  ylab= "Emotional Valence"
+  )
+
+
+#The get_percentage_values function divides the text into an equal number of parts then calculates the mean (average) sentiment valence for each, here= 10 parts
+percent_vals <- get_percentage_values(analysisofsentiment, bins = 10)
+plot(
+  percent_vals, 
+  type="l", 
+  main="My Text’s Percentage-Based Means (10)", 
+  xlab = "Narrative Time", 
+  ylab= "Emotional Valence", 
+  col="purple"
+  )
+
+#same but with 50 parts for more accuracy
+percent_vals <- get_percentage_values(analysisofsentiment, bins = 50)
+plot(
+  percent_vals, 
+  type="l", 
+  main="My Text’s Percentage-Based Means (50)", 
+  xlab = "Narrative Time", 
+  ylab= "Emotional Valence", 
+  col="green"
+  )
+
+
+emotions<- get_nrc_sentiment(anglais)
+head(emotions,10)
+
+
+td <- data.frame(t(emotions))
+
+#The function rowSums computes column sums across rows for each level of a grouping variable.
+td_new <- data.frame(rowSums(td[2:253]))
+
+#Transformation and cleaning
+names(td_new)[1] <- "count"
+td_new <- cbind("sentiment" = rownames(td_new), td_new)
+rownames(td_new) <- NULL
+td_new2 <- td_new[1:8,]
+
+#Plot One - count of words associated with each sentiment
+ggplot(data = td_new2, aes(x = sentiment, y = count, fill = sentiment, weight = count)) +
+  geom_bar(stat = "identity") +
+  ylab("count") +
+  ggtitle("Survey sentiments")
+
+#calculating the type-token ratio (how unique are the words used?= if a text has 100 words, and 50 words are unique, then the type-token ratio is 0.5)
+# load the necessary libraries
+library(tm)
+
+# read in the text file
+text <- readLines("C:/Users/liseb/.VirtualBox/everyone.txt")
+
+# create a corpus from the text
+corpus <- Corpus(VectorSource(text))
+
+# perform text cleaning on the corpus
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, stripWhitespace)
+
+# create a document-term matrix
+dtm <- DocumentTermMatrix(corpus)
+
+# calculate the type-token ratio
+type_token_ratio <- length(unique(dtm$dimnames$Terms)) / sum(dtm$v)
+
+# print the result
+cat("Type-Token Ratio:", round(type_token_ratio, 4))
